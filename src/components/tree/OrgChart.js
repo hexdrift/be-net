@@ -10,6 +10,7 @@ import FilterModal from "../modals/FilterModal";
 import TreeNode from "../node/TreeNode";
 import EnhancedNodeCard from "../node/EnhancedNodeCard";
 import Button from "../common/Button";
+import DataToolsModal from "../modals/DataToolsModal";
 import FileUploadModal from "../modals/FileUploadModal";
 import TableSelectionModal from "../modals/TableSelectionModal";
 import SettingsModal from "../settings/SettingsModal.js";
@@ -37,6 +38,7 @@ const OrgChart = ({ dbPath, initialTableId, initialFolderId, onReturnToLanding }
   const { t, i18n } = useTranslation();
   const [orgData, setOrgData] = useState(null);
   const [filteredOrgData, setFilteredOrgData] = useState(null);
+  const [dataTool, setDataTool] = useState(null);
   const [selectedTableId, setSelectedTableId] = useState(initialTableId);
   const [selectedFolderId, setSelectedFolderId] = useState(initialFolderId);
   const [folderStructure, setFolderStructure] = useState([]);
@@ -1026,6 +1028,8 @@ const OrgChart = ({ dbPath, initialTableId, initialFolderId, onReturnToLanding }
         className="h-screen w-screen overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 pt-20"
       >
         <NavigationBar
+          onColumnRoles={() => setDataTool("roles")}
+          onCompareTables={() => setDataTool("compare")}
           onHome={handleHome}
           onCenter={handleCenter}
           onFilter={toggleFilterModal}
@@ -1079,8 +1083,8 @@ const OrgChart = ({ dbPath, initialTableId, initialFolderId, onReturnToLanding }
           </AnimatePresence>
         </div>
   
-        {selectedSwapNode && !isOrganizationMode && (
-          <div className="fixed top-20 inset-x-0 flex justify-center z-40">
+        <AnimatePresence>{selectedSwapNode && !isOrganizationMode && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed top-20 inset-x-0 flex justify-center z-40">
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1095,8 +1099,8 @@ const OrgChart = ({ dbPath, initialTableId, initialFolderId, onReturnToLanding }
                 Click another node at the same level to swap positions, or click elsewhere to cancel.
               </span>
             </motion.div>
-          </div>
-        )}
+          </motion.div>
+        )}</AnimatePresence>
   
         <div
           ref={dragRef}
@@ -1115,7 +1119,7 @@ const OrgChart = ({ dbPath, initialTableId, initialFolderId, onReturnToLanding }
               transformOrigin: "0 0"
             }}
           >
-            <div className="p-8 pt-20">
+            <AnimatePresence mode="wait" initial={false}><motion.div key={`${selectedTableId}-${isOrganizationMode}-${isHierarchyMode}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: .15 }} className="p-8 pt-20">
               {isOrganizationMode ? (
                 <OrgNode
                   key={`org-tree-${swapKey}`}
@@ -1182,10 +1186,11 @@ const OrgChart = ({ dbPath, initialTableId, initialFolderId, onReturnToLanding }
                   onContextMenu={handleContextMenu}
                 />
               )}
-            </div>
+            </motion.div></AnimatePresence>
           </div>
         </div>
   
+        {dataTool && <DataToolsModal mode={dataTool} tableId={selectedTableId} dbPath={dbPath} folders={folderStructure} onClose={() => setDataTool(null)} />}
         <AnimatePresence>
           {isSettingsOpen && (
             <SettingsModal
@@ -1331,13 +1336,13 @@ const OrgChart = ({ dbPath, initialTableId, initialFolderId, onReturnToLanding }
         </AnimatePresence>
 
         {/* Color Legend - only show in hierarchy mode when colors are applied */}
-        {!isOrganizationMode && (
+        <AnimatePresence>{!isOrganizationMode && (
           <ColorLegend
             entries={getLegendEntries()}
             isRTL={i18n.language === 'he'}
             onUpdateLabel={updateLabel}
           />
-        )}
+        )}</AnimatePresence>
 
       </motion.div>
     </>

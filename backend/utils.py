@@ -331,10 +331,10 @@ def is_valid_continuation(previous_df, new_df):
 
 def process_excel_data(file_content, file_extension):
     if file_extension == 'csv':
-        df = pd.read_csv(io.BytesIO(file_content))
+        df = pd.read_csv(io.BytesIO(file_content), dtype=str, keep_default_na=False)
     else:  # xlsx
-        df = pd.read_excel(io.BytesIO(file_content))
-    
+        df = pd.read_excel(io.BytesIO(file_content), dtype=str, keep_default_na=False)
+    df.columns = df.columns.map(str)
     return df
 
 

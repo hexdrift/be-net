@@ -14,6 +14,8 @@ const NavigationBar = ({
   onOrganizationMode,
   onToggleVacancies,
   onManageData,
+  onColumnRoles,
+  onCompareTables,
   onExpandAll,
   onCollapseAll,
   onOpenSettings,
@@ -33,6 +35,14 @@ const NavigationBar = ({
   const { t, i18n } = useTranslation();
 
   const menus = [
+    {
+      id: 'data', label: t('navigation.manageData'), icon: Layers,
+      items: [
+        { id: 'tables', label: t('navigation.manageData'), icon: Table, onClick: onManageData },
+        { id: 'roles', label: t('columnRoles.title'), icon: Layers, onClick: onColumnRoles },
+        { id: 'compare', label: t('tableDiff.title'), icon: Users, onClick: onCompareTables }
+      ]
+    },
     {
       id: 'view',
       label: t('navigation.view'),
@@ -92,11 +102,6 @@ const NavigationBar = ({
           {/* Home */}
           <button onClick={onHome} className="text-gray-600 p-2 rounded-md hover:bg-gray-100 transition-colors" title={t('navigation.home')}>
             <Home size={18} />
-          </button>
-
-          {/* Manage Data */}
-          <button onClick={onManageData} className="text-gray-600 p-2 rounded-md hover:bg-gray-100 transition-colors" title={t('navigation.manageData')}>
-            <Layers size={18} />
           </button>
 
           {/* Dropdown Menus (View, Display, Export) */}

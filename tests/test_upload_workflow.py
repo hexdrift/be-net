@@ -374,9 +374,9 @@ class DatabaseUploadTests(unittest.TestCase):
 
 
 class ComparisonTests(unittest.TestCase):
-    """Keep vacant positions distinct when comparing tables."""
+    """Exclude records without employee IDs when comparing tables."""
 
-    def test_vacant_positions_fall_back_to_hierarchical_identity(self):
+    def test_vacant_positions_are_excluded_from_comparison(self):
         previous = [
             DataEntry(hierarchical_structure="/1", person_id=None),
             DataEntry(hierarchical_structure="/1/1", person_id="nan"),
@@ -389,11 +389,9 @@ class ComparisonTests(unittest.TestCase):
 
         changes = compare_org_data(previous, current)
 
-        self.assertEqual(
-            [entry["hierarchical_structure"] for entry in changes["added"]],
-            ["/1/2"],
-        )
+        self.assertEqual(changes["added"], [])
         self.assertEqual(changes["removed"], [])
+        self.assertEqual(len(changes["excluded"]), 5)
 
 
 if __name__ == "__main__":

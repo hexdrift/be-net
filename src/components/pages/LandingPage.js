@@ -70,6 +70,7 @@ const LandingPage = ({ onDatabaseReady, currentDbPath }) => {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'he';
   const [step, setStep] = useState("initial");
+  const [dbError, setDbError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [dbPath, setDbPath] = useState(currentDbPath);
   const [recentDbPath, setRecentDbPath] = useState(null);
@@ -105,6 +106,7 @@ const LandingPage = ({ onDatabaseReady, currentDbPath }) => {
 
     try {
       setIsLoading(true);
+      setDbError('');
       setDbInfo(null);
       setFolderStructure([]);
       setSelectedFolderForUpload(null);
@@ -135,12 +137,13 @@ const LandingPage = ({ onDatabaseReady, currentDbPath }) => {
       }
     } catch (error) {
       console.error("Error fetching database info:", error);
+      setDbError(error.response?.data?.error_key === 'database_format' ? t('columnRoles.errors.database_format') : error.response?.data?.error || t('tableDiff.failed'));
       setDbInfo(null);
       setFolderStructure([]);
     } finally {
       setIsLoading(false);
     }
-  }, [fetchFolderStructure]);
+  }, [fetchFolderStructure, t]);
 
   useEffect(() => {
     if (currentDbPath) {
@@ -430,7 +433,8 @@ const LandingPage = ({ onDatabaseReady, currentDbPath }) => {
         </div>
         
         {/* Right section - action area */}
-        <div className="col-span-7 flex items-center justify-center p-8">
+        <div className="col-span-7 flex flex-col items-center justify-center p-8">
+          {dbError && <p role="alert" className="mb-4 text-sm text-red-700">{dbError}</p>}
           <AnimatePresence mode="wait">
             {step === "initial" && (
               <motion.div

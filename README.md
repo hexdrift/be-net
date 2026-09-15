@@ -417,3 +417,15 @@ See [LANGUAGE_SETUP.md](LANGUAGE_SETUP.md) for detailed instructions.
 Released under the MIT License.
 
 </div>
+
+## Column roles and table differences
+
+When importing CSV or XLSX data, assign columns to be-net fields and choose a hierarchy format:
+
+- **ID and parent ID:** each row has a unique node ID and refers to its parent's node ID. The single root has an empty parent. The node ID can differ from the employee ID.
+- **Separate level columns:** select organizational levels from root to leaf. be-net creates the shared units. With an Employee ID column assigned, employees appear under the deepest unit; otherwise each row represents a unit. Trailing empty levels are allowed, but gaps are not.
+- **Existing hierarchy path:** select the column containing the existing slash paths.
+
+Preview the hierarchy before importing. be-net saves the column declarations and relevant source values with the table; unmapped columns are discarded. Reopening the database needs no source file. **This database format does not support older be-net databases:** create a new database and import their source data.
+
+Under **Manage Data → Column roles**, inspect a table's saved declarations. Under **Manage Data → Compare tables**, select before/after tables, including tables in different folders. Comparison uses Employee ID only and reports added/removed records, changed fields, and hierarchy moves. Missing IDs are excluded; an ID duplicated in either table is excluded on both sides to avoid false additions/removals. Exclusions are listed with their reasons.

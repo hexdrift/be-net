@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -18,6 +19,8 @@ from sqlalchemy import func, inspect, or_, and_
 
 try:
     # Try absolute import first (for when running from project root)
+    from backend.column_roles import apply_roles, preview_roles, suggested_roles
+    from backend.comparison import compare_records, employee_id
     from backend.models import (
         Folder,
         Table,
@@ -42,6 +45,8 @@ try:
     )
 except ModuleNotFoundError:
     # Fallback to relative imports (for when running from backend directory)
+    from column_roles import apply_roles, preview_roles, suggested_roles
+    from comparison import compare_records, employee_id
     from models import (
         Folder,
         Table,
@@ -221,9 +226,11 @@ def activate_database_path(database_path: Optional[str]) -> Optional[Tuple[Any, 
     if current_database_path and os.path.abspath(current_database_path) == os.path.abspath(database_path):
         return None
 
+    valid, message = check_db_schema(database_path)
+    if not valid:
+        return jsonify({"error": "This database uses an unsupported format. Create a new be-net database and import your data.", "detail": message, "error_key": "database_format"}), 400
     dispose_db()
     set_db_path(database_path)
-    init_db()
     return None
 
 
@@ -262,7 +269,7 @@ def check_existing_db() -> Any:
 
     schema_valid, schema_message = check_db_schema(db_path)
     if not schema_valid:
-        return jsonify({"error": f"Invalid database schema: {schema_message}"}), 400
+        return jsonify({"error": "This database uses an unsupported format. Create a new be-net database and import your data.", "detail": schema_message, "error_key": "database_format"}), 400
 
     dispose_db()
     set_db_path(db_path)
@@ -338,6 +345,52 @@ def create_new_db_route() -> Any:
         "tableId": first_table_id
     }), 200
 
+@app.route("/upload/preview", methods=["POST"])
+def preview_upload() -> Any:
+    """Inspect source columns or preview their declared hierarchy without writes."""
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"error": "Select an Excel or CSV file."}), 400
+    extension = file.filename.rsplit(".", 1)[-1].lower()
+    if extension not in ("csv", "xlsx"):
+        return jsonify({"error": "Select an Excel (.xlsx) or CSV file."}), 400
+    try:
+        frame = process_excel_data(file.read(), extension)
+        frame.columns = frame.columns.map(str)
+        if not len(frame) or not len(frame.columns):
+            raise ValueError("The file has no data rows.")
+        roles_json = request.form.get("column_roles")
+        if roles_json:
+            return jsonify(preview_roles(frame, json.loads(roles_json)))
+        return jsonify({
+            "columns": list(frame.columns),
+            "rows": frame.head(5).fillna("").to_dict(orient="records"),
+            "row_count": len(frame),
+            "suggested_roles": suggested_roles(list(frame.columns)),
+        })
+    except (ValueError, TypeError, KeyError) as error:
+        return jsonify({"error": str(error), "error_key": getattr(error, "code", None), "error_params": getattr(error, "params", {})}), 400
+
+
+@app.route("/table/<int:table_id>/column_roles", methods=["GET"])
+def get_column_roles(table_id: int) -> Any:
+    """Restore the saved column declarations without requiring the source file."""
+    database_error = activate_database_path(request.args.get("db_path"))
+    if database_error:
+        return database_error
+    with session_scope() as session:
+        table = session.get(Table, table_id)
+        if table is None:
+            return jsonify({"error": "Table not found"}), 404
+        saved = json.loads(table.source_data) if table.source_data else {}
+        return jsonify({
+            "roles": json.loads(table.column_roles) if table.column_roles else None,
+            "columns": saved.get("columns", []),
+            "rows": saved.get("rows", [])[:5],
+            "row_count": len(saved.get("rows", [])),
+        })
+
+
 @app.route("/upload", methods=["POST"])
 @validate_input(upload_date=datetime)
 def upload_file(upload_date: datetime) -> Any:
@@ -377,7 +430,7 @@ def upload_file(upload_date: datetime) -> Any:
     if file.filename == "":
         return jsonify({"error": "No selected file"}), 400
 
-    file_extension = file.filename.rsplit(".", 1)[1].lower()
+    file_extension = file.filename.rsplit(".", 1)[-1].lower()
     if file_extension not in ["csv", "xlsx"]:
         return jsonify({"error": "Unsupported file type. Please upload CSV or XLSX files."}), 400
 
@@ -411,6 +464,9 @@ def upload_file(upload_date: datetime) -> Any:
             logger.info(f"Table created: {table.name} (ID: {table.id})")
 
             df = process_excel_data(file_content, file_extension)
+            roles = json.loads(request.form.get("column_roles", "null")) or suggested_roles(list(df.columns))
+            df, saved = apply_roles(df, roles)
+            table.column_roles = json.dumps(roles, ensure_ascii=False)
             import_result = insert_data_entries(session, table.id, df)
 
             if import_result["inserted_count"] == 0:
@@ -420,6 +476,12 @@ def upload_file(upload_date: datetime) -> Any:
                     "log": import_result["log"],
                 }), 400
             
+            session.flush()
+            accepted_paths = {entry.hierarchical_structure for entry in session.query(DataEntry).filter_by(table_id=table.id)}
+            rejected_rows = {row['row'] for row in (import_result['log'] or {}).get('rejected_rows', [])}
+            saved['rows'] = [row for index, row in enumerate(saved['rows'])
+                             if index + 2 not in rejected_rows and df.iloc[index]['hierarchical_structure'] in accepted_paths]
+            table.source_data = json.dumps(saved, ensure_ascii=False)
             logger.info(f"File processed and data inserted successfully for table ID: {table.id}")
             session.commit()
             logger.info(f"Upload completed successfully for folder: {folder_name}, table ID: {table.id}")
@@ -455,7 +517,7 @@ def upload_file(upload_date: datetime) -> Any:
                     logger.error(f"Error while attempting to delete folder: {str(delete_error)}")
             
             status_code = 400 if isinstance(e, ValueError) else 500
-            return jsonify({"error": str(e)}), status_code
+            return jsonify({"error": str(e), "error_key": getattr(e, "code", None), "error_params": getattr(e, "params", {})}), status_code
 
 @app.route("/folder_structure", methods=["GET"])
 def fetch_folder_structure() -> Any:
@@ -1069,90 +1131,30 @@ def compare_tables(folder_id: int, table1_id: int, table2_id: int) -> Any:
         return jsonify(report), 200
 
 def compare_org_data(data1: List[DataEntry], data2: List[DataEntry]) -> Dict[str, Any]:
-    """
-    Compare two sets of organizational data and identify changes.
+    """Compare only records with unambiguous employee IDs."""
+    return compare_records(data1, data2)
 
-    Parameters:
-        data1 (List[DataEntry]): The first set of data entries.
-        data2 (List[DataEntry]): The second set of data entries.
 
-    Returns:
-        Dict[str, Any]: A dictionary containing the changes between the two datasets.
-    """
-    changes = {
-        "added": [],
-        "removed": [],
-        "changed": [],
-        "department_changes": {},
-        "role_changes": {},
-        "rank_changes": {},
-        "reporting_line_changes": {}
-    }
-    
-    def entry_identity(entry: DataEntry) -> str:
-        if entry.person_id and entry.person_id != "nan":
-            return f"person:{entry.person_id}"
-        return f"structure:{entry.hierarchical_structure}"
+@app.route("/compare_tables", methods=["GET"])
+@validate_input(table1_id=int, table2_id=int)
+def compare_database_tables(table1_id: int, table2_id: int) -> Any:
+    """Compare two tables anywhere in the active be-net database."""
+    database_error = activate_database_path(request.args.get("db_path"))
+    if database_error:
+        return database_error
+    if table1_id == table2_id:
+        return jsonify({"error": "Select two different tables"}), 400
+    with session_scope() as session:
+        tables = [session.get(Table, table_id) for table_id in (table1_id, table2_id)]
+        if any(table is None for table in tables):
+            return jsonify({"error": "One or both tables were not found"}), 404
+        entries = [session.query(DataEntry).filter_by(table_id=table.id).all() for table in tables]
+        return jsonify({
+            "table1": {"id": tables[0].id, "name": tables[0].name},
+            "table2": {"id": tables[1].id, "name": tables[1].name},
+            "changes": compare_org_data(*entries),
+        })
 
-    data1_dict = {entry_identity(entry): entry for entry in data1}
-    data2_dict = {entry_identity(entry): entry for entry in data2}
-    
-    for identity, entry2 in data2_dict.items():
-        change_key = (
-            entry2.person_id
-            if entry2.person_id and entry2.person_id != "nan"
-            else entry2.hierarchical_structure
-        )
-        if identity not in data1_dict:
-            changes["added"].append(entry_to_dict(entry2))
-        else:
-            entry1 = data1_dict[identity]
-            if entry1.department != entry2.department:
-                changes["department_changes"][change_key] = {
-                    "name": entry2.name,
-                    "old": entry1.department,
-                    "new": entry2.department
-                }
-            if entry1.role != entry2.role:
-                changes["role_changes"][change_key] = {
-                    "name": entry2.name,
-                    "old": entry1.role,
-                    "new": entry2.role
-                }
-            if entry1.rank != entry2.rank:
-                changes["rank_changes"][change_key] = {
-                    "name": entry2.name,
-                    "old": entry1.rank,
-                    "new": entry2.rank
-                }
-            if entry1.hierarchical_structure != entry2.hierarchical_structure:
-                changes["reporting_line_changes"][change_key] = {
-                    "name": entry2.name,
-                    "old": entry1.hierarchical_structure,
-                    "new": entry2.hierarchical_structure
-                }
-            if any([
-                entry1.department != entry2.department,
-                entry1.role != entry2.role,
-                entry1.rank != entry2.rank,
-                entry1.hierarchical_structure != entry2.hierarchical_structure
-            ]):
-                changes["changed"].append({
-                    "person_id": entry2.person_id,
-                    "name": entry2.name,
-                    "changes": {
-                        "department": (entry1.department, entry2.department),
-                        "role": (entry1.role, entry2.role),
-                        "rank": (entry1.rank, entry2.rank),
-                        "hierarchical_structure": (entry1.hierarchical_structure, entry2.hierarchical_structure)
-                    }
-                })
-    
-    for identity, entry1 in data1_dict.items():
-        if identity not in data2_dict:
-            changes["removed"].append(entry_to_dict(entry1))
-    
-    return changes
 
 def generate_aggregated_report(changes: Dict[str, Any], data1: List[DataEntry], data2: List[DataEntry]) -> Dict[str, Any]:
     """
@@ -1166,6 +1168,9 @@ def generate_aggregated_report(changes: Dict[str, Any], data1: List[DataEntry], 
     Returns:
         Dict[str, Any]: A dictionary containing the aggregated report.
     """
+    excluded_ids = {item['record']['person_id'] for item in changes['excluded']}
+    data1 = [entry for entry in data1 if employee_id(entry) and employee_id(entry) not in excluded_ids]
+    data2 = [entry for entry in data2 if employee_id(entry) and employee_id(entry) not in excluded_ids]
     return {
         "total_employees": {
             "before": len(data1),

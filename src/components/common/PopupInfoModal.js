@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import '../../styles/scrollbar.css';
@@ -74,7 +75,6 @@ const PopupInfoModal = ({
     };
   }, [isOpen, onClose, triggerRef]);
 
-  if (!isOpen) return null;
 
   const renderContent = () => {
     if (typeof content === 'string') {
@@ -121,7 +121,8 @@ const PopupInfoModal = ({
   };
 
   return createPortal(
-    <div
+    <AnimatePresence>{isOpen && <motion.div
+      initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }} transition={{ duration: .15 }}
       ref={popupRef}
       className="fixed z-50 bg-white bg-opacity-90 backdrop-filter backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-gray-200"
       style={popupStyle}
@@ -141,7 +142,7 @@ const PopupInfoModal = ({
       >
         {renderContent()}
       </div>
-    </div>,
+    </motion.div>}</AnimatePresence>,
     document.body
   );
 };

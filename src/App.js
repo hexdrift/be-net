@@ -1,4 +1,8 @@
+import useReducedMotionPreference from './Utilities/useReducedMotionPreference';
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
+import './styles/data-tools.css';
+import './styles/motion.css';
 import { OrgChartProvider } from './components/context/OrgChartContext';
 import OrgChart from './components/tree/OrgChart';
 import LandingPage from './components/pages/LandingPage';
@@ -11,6 +15,7 @@ import './styles/rtl.css';
 
 function App() {
   const { i18n } = useTranslation();
+  const reduceMotion = useReducedMotionPreference();
   const [dbSelected, setDbSelected] = useState(false);
   const [dbPath, setDbPath] = useState(null);
   const [initialTableId, setInitialTableId] = useState(null);
@@ -45,8 +50,9 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <MotionConfig reducedMotion={reduceMotion ? 'always' : 'never'} transition={{ duration: .2, ease: [0.16, 1, 0.3, 1] }}><div className="App">
       <OrgChartProvider>
+        <AnimatePresence mode="wait" initial={false}><motion.div key={dbSelected ? 'chart' : 'landing'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         {!dbSelected ? (
           <LandingPage onDatabaseReady={handleDatabaseReady} currentDbPath={dbPath} />
         ) : (
@@ -57,12 +63,13 @@ function App() {
             onReturnToLanding={handleReturnToLanding}
           />
         )}
+        </motion.div></AnimatePresence>
       </OrgChartProvider>
       <ToastContainer
         position={i18n.language === 'he' ? 'bottom-left' : 'bottom-right'}
         rtl={i18n.language === 'he'}
       />
-    </div>
+    </div></MotionConfig>
   );
 }
 

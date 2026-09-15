@@ -328,9 +328,9 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -378,7 +378,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
           </div>
 
           {/* Content with improved visual hierarchy */}
-          <div className="flex-1 p-8 overflow-y-auto relative bg-white">
+          <motion.div key={activeTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .18 }} className="flex-1 p-8 overflow-y-auto relative bg-white">
             {activeTab === 'display' && (
               <div className="h-full">
                 <div className="flex justify-between items-center mb-6">
@@ -715,7 +715,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
 
         {/* Footer with button styled like UpdatePersonalInfoSection */}

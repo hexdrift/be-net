@@ -25,6 +25,8 @@ class Table(Base):
     name = Column(String, nullable=False)
     folder_id = Column(Integer, ForeignKey('folders.id'), nullable=False)
     upload_date = Column(Date, nullable=False)
+    column_roles = Column(Text, nullable=True)
+    source_data = Column(Text, nullable=True)
     colors_config = Column(Text, nullable=True)  # JSON string storing color and label settings
     folder = relationship('Folder', back_populates='tables')
     data_entries = relationship('DataEntry', back_populates='table', cascade='all, delete-orphan')
@@ -170,8 +172,6 @@ def migrate_db_schema(db_path):
 def check_db_schema(db_path):
     logger.info(f"Checking schema for database: {db_path}")
 
-    # First, try to migrate any missing columns
-    migrate_db_schema(db_path)
 
     try:
         temp_engine = create_engine(f'sqlite:///{db_path}', echo=True)

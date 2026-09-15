@@ -128,16 +128,16 @@ const ColorLegend = ({ entries = [], isRTL = false, onUpdateLabel }) => {
   };
 
   // Don't render if no labeled entries and not editing
-  if (labeledEntries.length === 0 && !editingId) return null;
+  const visible = labeledEntries.length > 0 || Boolean(editingId);
 
   return (
-    <div
+    <AnimatePresence propagate>{visible && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className={`
         fixed bottom-4 z-40 export-hide
         ${isRTL ? 'left-4' : 'right-4'}
       `}
     >
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" propagate>
         {isExpanded ? (
           // Expanded legend
           <motion.div
@@ -371,7 +371,7 @@ const ColorLegend = ({ entries = [], isRTL = false, onUpdateLabel }) => {
           </motion.button>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>}</AnimatePresence>
   );
 };
 

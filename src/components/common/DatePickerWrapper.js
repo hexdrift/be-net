@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -13,6 +13,7 @@ const DatePickerWrapper = ({
   wrapperOpacity = '',
   containerClassName = ''
 }) => {
+  const [calendarMonth, setCalendarMonth] = useState(0);
   const currentYear = useMemo(() => {
     if (isRange && Array.isArray(date)) {
       return (date[1] || date[0] || new Date()).getFullYear();
@@ -54,7 +55,9 @@ const DatePickerWrapper = ({
           dateFormat="yyyy-MM-dd"
           placeholderText={placeholderText || "Select date"}
           className="bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500 w-full text-center"
-          calendarClassName="custom-calendar shadow-lg border border-gray-200 rounded-md"
+          calendarClassName={`custom-calendar calendar-month-${calendarMonth % 2} shadow-lg border border-gray-200 rounded-md`}
+          onMonthChange={() => setCalendarMonth(value => value + 1)}
+          onYearChange={() => setCalendarMonth(value => value + 1)}
           wrapperClassName="date-picker-wrapper w-full"
           popperClassName="date-picker-popper"
           dayClassName={dayClassName}
