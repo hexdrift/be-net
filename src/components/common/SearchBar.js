@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { ChevronUp, ChevronDown, X, Search } from 'react-feather';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
 const SearchBar = ({ onSearch, totalResults, currentResult, onNavigate, onClose, searchTerm, setSearchTerm, autoFocus }) => {
@@ -62,7 +62,7 @@ const SearchBar = ({ onSearch, totalResults, currentResult, onNavigate, onClose,
         className="py-1.5 px-2 bg-transparent focus:outline-none text-sm text-gray-700 placeholder-gray-400 flex-grow w-40"
         autoComplete="off"
       />
-      {searchTerm.trim() !== '' && (
+      <AnimatePresence initial={false}>{searchTerm.trim() !== '' && <motion.div key={totalResults > 0 ? 'matches' : 'empty'} initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} transition={{ duration: .16 }} className="overflow-hidden whitespace-nowrap">{(
         totalResults > 0 ? (
         <div className="flex items-center">
           <span className="text-xs text-gray-500 mr-1 rtl:mr-0 rtl:ml-1 font-medium">
@@ -78,7 +78,7 @@ const SearchBar = ({ onSearch, totalResults, currentResult, onNavigate, onClose,
             {t('searchBar.noResults')}
           </span>
         )
-      )}
+      )}</motion.div>}</AnimatePresence>
       <SearchNavButton onClick={onClose} icon={X} label={t('searchBar.closeSearch')} variant="danger" />
     </div>
   );

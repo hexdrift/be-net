@@ -1,3 +1,6 @@
+import { motion, useIsPresent } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import TransitionView from '../../common/TransitionView';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ArrowLeft,
@@ -135,6 +138,7 @@ const ComparisonRow = ({ label, before, after, onChangeCount, icon: Icon }) => {
 
 // Main component
 const UpdatePersonalInfoSection = ({ node, onBack, folderId, onUpdateComplete }) => {
+  const present = useIsPresent();
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'he';
   const [formData, setFormData] = useState({
@@ -683,19 +687,17 @@ const UpdatePersonalInfoSection = ({ node, onBack, folderId, onUpdateComplete })
                   {tab.icon}
                   <span className={currentTab === tab.id ? 'font-medium' : ''}>{tab.label}</span>
                   {currentTab === tab.id && (
-                    <div 
-                      className="absolute bottom-0 left-0 right-0 h-0.5"
-                      style={{ backgroundColor: THEME.primary }}
-                    ></div>
+                    <motion.div layoutId="personal-edit-tab" className="absolute bottom-0 left-0 right-0 h-0.5"
+                      style={{ backgroundColor: THEME.primary }} />
                   )}
                 </button>
               ))}
             </div>
 
             {/* Tab content */}
-            <div key={currentTab}>
+            <TransitionView stateKey={currentTab}>
               {renderFormContent()}
-            </div>
+            </TransitionView>
             
             {/* Date range selection */}
             {renderDateRangeSelection()}
@@ -729,19 +731,17 @@ const UpdatePersonalInfoSection = ({ node, onBack, folderId, onUpdateComplete })
                     )}
                   </span>
                   {reviewTab === tab.id && (
-                    <div 
-                      className="absolute bottom-0 left-0 right-0 h-0.5"
-                      style={{ backgroundColor: THEME.primary }}
-                    ></div>
+                    <motion.div layoutId="personal-edit-tab" className="absolute bottom-0 left-0 right-0 h-0.5"
+                      style={{ backgroundColor: THEME.primary }} />
                   )}
                 </button>
               ))}
             </div>
 
             {/* Review tab content */}
-            <div key={reviewTab}>
+            <TransitionView stateKey={reviewTab}>
               {renderReviewContent()}
-            </div>
+            </TransitionView>
           </>
         );
       default:
@@ -749,12 +749,12 @@ const UpdatePersonalInfoSection = ({ node, onBack, folderId, onUpdateComplete })
     }
   };
 
-  return (
-    <div
+  return createPortal(
+    <motion.div inert={present ? undefined : ''} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4"
       onClick={(e) => e.target === e.currentTarget && onBack()}
     >
-      <div
+      <motion.div initial={{ opacity: 0, scale: .98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .98 }}
         className="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden flex flex-col"
         style={{ maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
@@ -795,8 +795,8 @@ const UpdatePersonalInfoSection = ({ node, onBack, folderId, onUpdateComplete })
         {/* Content Area */}
         <div className="flex-grow overflow-y-auto custom-scrollbar">
           <div className="p-4">
-            <div key={currentStep}>
-              {renderStepContent()}
+            <div>
+              <TransitionView stateKey={currentStep}>{renderStepContent()}</TransitionView>
             </div>
           </div>
         </div>
@@ -852,8 +852,8 @@ const UpdatePersonalInfoSection = ({ node, onBack, folderId, onUpdateComplete })
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>, document.body
   );
 };
 

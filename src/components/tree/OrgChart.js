@@ -1336,13 +1336,13 @@ const OrgChart = ({ dbPath, initialTableId, initialFolderId, onReturnToLanding }
         </AnimatePresence>
 
         {/* Color Legend - only show in hierarchy mode when colors are applied */}
-        {!isOrganizationMode && (
+        <AnimatePresence>{!isOrganizationMode && (
           <ColorLegend
             entries={getLegendEntries()}
             isRTL={i18n.language === 'he'}
             onUpdateLabel={updateLabel}
           />
-        )}
+        )}</AnimatePresence>
 
       </motion.div>
     </>

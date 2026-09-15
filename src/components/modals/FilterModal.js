@@ -1,3 +1,4 @@
+import TransitionView from '../common/TransitionView';
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
@@ -250,9 +251,9 @@ const EnhancedFilterModal = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -305,9 +306,9 @@ const EnhancedFilterModal = ({
         <div className="flex-grow overflow-y-auto custom-scrollbar">
           <div className="p-6">
             <div className="bg-white rounded-md border border-gray-100 overflow-hidden">
-              <div className="p-4">
+              <TransitionView stateKey={isLoading ? 'loading' : results.length ? 'results' : 'empty'} className="p-4">
                 {renderResults()}
-              </div>
+              </TransitionView>
             </div>
           </div>
         </div>

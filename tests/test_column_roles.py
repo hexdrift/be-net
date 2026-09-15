@@ -1,5 +1,6 @@
 """Verify hierarchy declarations and durable, restricted source storage."""
 
+from contextlib import closing
 import io
 import json
 import os
@@ -105,7 +106,7 @@ class StoredRoleTests(unittest.TestCase):
         response = self.client.post('/upload/preview', data={'file': (io.BytesIO(b'Employee,Parent,Name\n001,,Root\n002,001,Child\n'), 'test.csv')})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json['rows'][0]['Employee'], '001')
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection:
             self.assertEqual(connection.execute('select count(*) from tables').fetchone()[0], 0)
 
     def test_reopen_restores_only_declared_source_columns(self):
@@ -118,7 +119,7 @@ class StoredRoleTests(unittest.TestCase):
         self.assertEqual(saved['roles'], self.config)
         self.assertEqual(saved['row_count'], 2)
         self.assertNotIn('Unmapped', saved['columns'])
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection:
             source = connection.execute('select source_data from tables').fetchone()[0]
             self.assertNotIn('secret', source)
             self.assertEqual(connection.execute('select person_id from data_entries order by person_id').fetchall(), [('001',),('002',)])
@@ -138,17 +139,18 @@ class StoredRoleTests(unittest.TestCase):
             'db_path':self.path, 'folder_name':'Paths', 'upload_date':'2026-09-14',
         })
         self.assertEqual(response.status_code, 200, response.json)
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection:
             saved = json.loads(connection.execute('select source_data from tables').fetchone()[0])
         self.assertEqual(saved['rows'], [{'hierarchical_structure':'/root','name':'Good'}])
 
     def test_unsupported_old_database_is_not_migrated(self):
         dispose_db()
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection:
             connection.execute('alter table tables drop column source_data')
+            connection.commit()
         response = self.client.post('/check_existing_db', json={'db_path':self.path})
         self.assertEqual(response.status_code, 400)
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection:
             self.assertNotIn('source_data', [row[1] for row in connection.execute('pragma table_info(tables)')])
 
 

@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion';
+import TransitionView from '../../common/TransitionView';
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, User, BookOpen, Briefcase, Heart, Calendar, BadgeInfo, Award, Building } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -209,17 +211,15 @@ const NodeInformation = ({ node, onBack, theme = DEFAULT_THEME }) => {
             {tab.icon}
             <span className={activeTab === tab.id ? 'font-medium' : ''}>{tab.label}</span>
             {activeTab === tab.id && (
-              <div 
-                className="absolute bottom-0 left-0 right-0 h-0.5"
-                style={{ backgroundColor: theme.primary }}
-              ></div>
+              <motion.div layoutId="node-info-tab" className="absolute bottom-0 left-0 right-0 h-0.5"
+                style={{ backgroundColor: theme.primary }} />
             )}
           </button>
         ))}
       </div>
 
       {/* Tab content - updated styling */}
-      <div className="p-4 min-h-[250px]">
+      <TransitionView stateKey={activeTab} className="p-4 min-h-[250px]">
         {activeTab === 'personal' && (
           <div
             key="personal-tab"
@@ -350,7 +350,7 @@ const NodeInformation = ({ node, onBack, theme = DEFAULT_THEME }) => {
             )}
           </div>
         )}
-      </div>
+      </TransitionView>
     </div>
   );
 };

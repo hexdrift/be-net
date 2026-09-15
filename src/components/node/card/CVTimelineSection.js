@@ -1,3 +1,4 @@
+import TransitionView from '../../common/TransitionView';
 import React, { useState, useRef } from 'react';
 import { ArrowLeft, ArrowRight, User, GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -291,8 +292,10 @@ const CVTimelineSection = ({ node, folderId, tableId, onBack, theme = DEFAULT_TH
         {renderNavigationButton()}
       </div>
 
+      <TransitionView stateKey={`${activeScreen}-${dataStatus}-${error || ''}`}>
       {activeScreen === 'main' && renderQueryTypeSelection()}
       {activeScreen === 'data' && renderContent()}
+      </TransitionView>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import TransitionView from '../common/TransitionView';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Save, User, Briefcase, Heart } from 'react-feather';
@@ -382,9 +383,9 @@ const NodeEditorModal = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -392,7 +393,7 @@ const NodeEditorModal = ({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.2, delay: 0.05 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className="bg-white rounded-lg shadow-xl w-full max-w-4xl overflow-hidden flex flex-col"
         style={{ maxHeight: "90vh" }}
         onClick={(e) => e.stopPropagation()}
@@ -428,19 +429,17 @@ const NodeEditorModal = ({
                       {tab.icon}
                       <span className={currentTab === tab.id ? 'font-medium' : ''}>{tab.label}</span>
                       {currentTab === tab.id && (
-                        <div
-                          className="absolute bottom-0 left-0 right-0 h-0.5"
-                          style={{ backgroundColor: THEME.primary }}
-                        ></div>
+                        <motion.div layoutId="node-editor-tab" className="absolute bottom-0 left-0 right-0 h-0.5"
+                          style={{ backgroundColor: THEME.primary }} />
                       )}
                     </button>
                   ))}
                 </div>
 
                 {/* Tab content */}
-                <div key={currentTab}>
+                <TransitionView stateKey={currentTab}>
                   {renderFormContent()}
-                </div>
+                </TransitionView>
               </div>
             </div>
 

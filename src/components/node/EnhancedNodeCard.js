@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import TransitionView from '../common/TransitionView';
 import { X, ArrowRight, User, Edit, ArrowLeft, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getLanguage, getFontClass } from '../../Utilities/languageUtils';
@@ -36,13 +37,6 @@ const EnhancedNodeCard = ({
   const departmentLanguage = getLanguage(node?.department || '');
   const hasPersonId = Boolean(node?.person_id && node.person_id !== 'nan');
   
-  // Force a re-render when mounted to ensure content appears
-  const [forceRender, setForceRender] = useState(0);
-  useEffect(() => {
-    // Force a re-render after mount to make content appear
-    setForceRender(1);
-  }, []);
-
   const handleOpenUpdateScreen = () => {
     setActiveScreen('updateMenu');
     onOpenUpdateModal && onOpenUpdateModal();
@@ -54,10 +48,15 @@ const EnhancedNodeCard = ({
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+    <AnimatePresence mode="wait" propagate initial={false}>
+    {activeScreen === 'updatePersonal' ? <UpdatePersonalInfoSection
+      key="personal-update" node={node} onBack={() => setActiveScreen('updateMenu')}
+      folderId={folderId} tableId={tableId} folderStructure={folderStructure}
+      onUpdateComplete={onUpdateComplete} theme={THEME}
+    /> : <motion.div key="node-card"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -65,7 +64,7 @@ const EnhancedNodeCard = ({
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.2, delay: 0.05 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className="bg-white rounded-lg shadow-xl max-w-md w-full overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
         style={{ maxHeight: "calc(100vh - 40px)" }}
@@ -87,8 +86,7 @@ const EnhancedNodeCard = ({
         {/* Content - Dynamic with fixed constraints */}
         <div className="flex-grow overflow-y-auto custom-scrollbar">
           <div className="relative">
-            {/* Ensure everything renders with key={forceRender} */}
-            <div key={forceRender}>
+            <TransitionView stateKey={activeScreen}>
               {activeScreen === 'main' && (
                 <div className="p-6 space-y-4">
                   {/* Role */}
@@ -177,20 +175,6 @@ const EnhancedNodeCard = ({
                 </div>
               )}
               
-              {activeScreen === 'updatePersonal' && (
-                <div>
-                  <UpdatePersonalInfoSection
-                    node={node}
-                    onBack={() => setActiveScreen('updateMenu')}
-                    folderId={folderId}
-                    tableId={tableId}
-                    folderStructure={folderStructure}
-                    onUpdateComplete={onUpdateComplete}
-                    theme={THEME}
-                  />
-                </div>
-              )}
-
               {activeScreen === 'cv' && (
                 <div>
                   <CVTimelineSection
@@ -202,11 +186,12 @@ const EnhancedNodeCard = ({
                   />
                 </div>
               )}
-            </div>
+            </TransitionView>
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>}
+    </AnimatePresence>
   );
 };
 

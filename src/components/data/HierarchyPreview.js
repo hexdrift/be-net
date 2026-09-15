@@ -1,6 +1,7 @@
+import useReducedMotionPreference from '../../Utilities/useReducedMotionPreference';
 import React, { useMemo, useState } from 'react';
 import { hierarchy, tree } from 'd3';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { GitBranch, Plus, Minus, Maximize2 } from 'react-feather';
 import { useTranslation } from 'react-i18next';
 
@@ -10,7 +11,7 @@ function Branch({ node }) {
 
 export default function HierarchyPreview({ rows, total }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotionPreference();
   const [zoom, setZoom] = useState(1);
   const graph = useMemo(() => {
     const nodes = new Map();

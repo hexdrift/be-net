@@ -1,3 +1,4 @@
+import useReducedMotionPreference from './Utilities/useReducedMotionPreference';
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import './styles/data-tools.css';
@@ -14,6 +15,7 @@ import './styles/rtl.css';
 
 function App() {
   const { i18n } = useTranslation();
+  const reduceMotion = useReducedMotionPreference();
   const [dbSelected, setDbSelected] = useState(false);
   const [dbPath, setDbPath] = useState(null);
   const [initialTableId, setInitialTableId] = useState(null);
@@ -48,7 +50,7 @@ function App() {
   };
 
   return (
-    <MotionConfig reducedMotion="user" transition={{ duration: .2, ease: [0.16, 1, 0.3, 1] }}><div className="App">
+    <MotionConfig reducedMotion={reduceMotion ? 'always' : 'never'} transition={{ duration: .2, ease: [0.16, 1, 0.3, 1] }}><div className="App">
       <OrgChartProvider>
         <AnimatePresence mode="wait" initial={false}><motion.div key={dbSelected ? 'chart' : 'landing'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         {!dbSelected ? (

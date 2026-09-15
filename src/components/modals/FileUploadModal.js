@@ -317,9 +317,9 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-center items-center p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
@@ -327,7 +327,7 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.2, delay: 0.05 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className="bg-white rounded-lg shadow-xl w-full max-w-3xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >

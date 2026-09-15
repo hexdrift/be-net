@@ -39,3 +39,9 @@ Focal interaction: source rows become a connected tree; comparison reveals measu
 - [Carbon chart selection](https://carbondesignsystem.com/data-visualization/chart-types/): comparison bars and hierarchy trees.
 - [Carbon content switcher](https://carbondesignsystem.com/components/content-switcher/usage/): recognizable icons with explicit text labels.
 - [PatternFly motion](https://www.patternfly.org/design-foundations/motion/): purposeful, brief state continuity.
+
+## App-wide motion follow-up
+
+The motion audit also covers employee information screens and tabs, node editor tabs, the personal-update form and review steps, CV query/loading/results, search-result controls, result popovers, calendar popup/month changes, filter loading/results, folder/table layout changes, and legend disappearance. Existing menu, tree expansion, color sections, import, and page transitions remain in place. Full-screen scrims fade independently of foreground panels. Personal updates render in a body portal so parent-card clipping does not constrain their transitions. Departing screen controls become inert, and rapid navigation settles on the latest selected screen.
+
+Reduced-motion preferences now disable Framer Motion's height and path animations as well as spatial transforms and CSS transitions, including preferences changed while the app is open. No new motion dependency is added.

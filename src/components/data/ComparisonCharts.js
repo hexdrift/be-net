@@ -1,5 +1,6 @@
+import useReducedMotionPreference from '../../Utilities/useReducedMotionPreference';
 import React, { useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { BarChart2, Users, UserPlus, UserMinus, Edit3, GitBranch, Briefcase, Layers, Grid, AlertCircle } from 'react-feather';
 import { useTranslation } from 'react-i18next';
 
@@ -13,7 +14,7 @@ const dimensions = { department: Grid, role: Briefcase, rank: Layers, organizati
 
 export default function ComparisonCharts({ changes, active, onSelect }) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotionPreference();
   const fields = Object.keys(changes.distributions || {});
   const [dimension, setDimension] = useState(fields[0]);
   const [all, setAll] = useState(false);

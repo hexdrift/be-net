@@ -23,3 +23,21 @@ details[open] > :not(summary) { animation: content-enter 180ms ease-out; }
     scroll-behavior: auto !important;
   }
 }
+
+/* Calendar popup placement belongs to the positioning library; animate its contents. */
+.react-datepicker { animation: content-enter 160ms ease-out; }
+.react-datepicker__month { animation: content-enter 160ms ease-out; }
+.react-datepicker__day, .react-datepicker__navigation, [role="checkbox"], input[type="checkbox"], input[type="radio"] {
+  transition: background-color 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out, box-shadow 140ms ease-out;
+}
+@supports (interpolate-size: allow-keywords) and (transition-behavior: allow-discrete) {
+  details { interpolate-size: allow-keywords; }
+  details::details-content { block-size: 0; overflow: clip; transition: block-size 180ms ease-out, content-visibility 180ms allow-discrete; }
+  details[open]::details-content { block-size: auto; }
+}
+.calendar-month-0 .react-datepicker__month { animation-name: content-enter; }
+.calendar-month-1 .react-datepicker__month { animation-name: calendar-enter; }
+@keyframes calendar-enter { from { opacity:0; } to { opacity:1; } }
+@media (prefers-reduced-motion: reduce) {
+  details::details-content { transition: none !important; }
+}
