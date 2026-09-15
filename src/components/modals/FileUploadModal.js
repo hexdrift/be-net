@@ -7,11 +7,14 @@ import {
   File,
   FileText,
   Edit3,
+  GitBranch,
 } from "react-feather";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
+import HierarchyPreview from "../data/HierarchyPreview";
+import ColumnRoles, { columnRoleError } from "./ColumnRoles";
 import DatePickerWrapper from "../common/DatePickerWrapper";
 import "../../styles/datepicker.css";
 import '../../styles/scrollbar.css';
@@ -65,8 +68,58 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
   const [treeName, setTreeName] = useState("");
   const [folderName, setFolderName] = useState(""); // Store folder name for create-tree
   const [isDownloadMenuOpen, setIsDownloadMenuOpen] = useState(false);
+  const [source, setSource] = useState(null);
+  const [roles, setRoles] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [importError, setImportError] = useState('');
   const fileInputRef = useRef(null);
   const downloadMenuRef = useRef(null);
+  const previewRequest = useRef(0);
+
+  useEffect(() => {
+    previewRequest.current += 1;
+    setSource(null);
+    setRoles(null);
+    setPreview(null);
+    setImportError('');
+    if (!selectedFile) return;
+    let active = true;
+    setBusy(true);
+    const data = new FormData();
+    data.append('file', selectedFile);
+    axios.post(`${API_BASE_URL}/upload/preview`, data).then(response => {
+      if (active) {
+        setSource(response.data);
+        setRoles(response.data.suggested_roles);
+      }
+    }).catch(error => {
+      if (active) setImportError(columnRoleError(error, t));
+    }).finally(() => { if (active) setBusy(false); });
+    return () => { active = false; };
+  }, [selectedFile, t]);
+
+  const updateRoles = next => {
+    previewRequest.current += 1;
+    setRoles(next);
+    setPreview(null);
+    setImportError('');
+  };
+
+  const handlePreview = async () => {
+    const currentRequest = ++previewRequest.current;
+    setBusy(true);
+    setImportError('');
+    const data = new FormData();
+    data.append('file', selectedFile);
+    data.append('column_roles', JSON.stringify(roles));
+    try {
+      const response = await axios.post(`${API_BASE_URL}/upload/preview`, data);
+      if (currentRequest === previewRequest.current) setPreview(response.data);
+    } catch (error) {
+      if (currentRequest === previewRequest.current) setImportError(columnRoleError(error, t));
+    } finally { if (currentRequest === previewRequest.current) setBusy(false); }
+  };
 
   useEffect(() => {
     if (isOpen && dbPath) {
@@ -150,6 +203,7 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    if (busy) return;
     const file = e.dataTransfer.files[0];
     if (file) {
       setSelectedFile(file);
@@ -167,9 +221,11 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
     : null;
 
   const handleUpload = async () => {
-    if (selectedFile && selectedFolder && uploadDate) {
+    if (selectedFile && selectedFolder && uploadDate && preview?.inserted_count && !busy) {
+      setBusy(true);
       const formData = new FormData();
       formData.append("file", selectedFile);
+      formData.append("column_roles", JSON.stringify(roles));
       formData.append("folder_id", selectedFolder.id);
       formData.append("folder_name", selectedFolder.name);
       formData.append("is_new_folder", "false");
@@ -203,9 +259,9 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
           downloadParsingLog(error.response.data.log);
         }
         toast.error(
-          error.response?.data?.error || t('fileUpload.failedToUpload')
+          columnRoleError(error, t)
         );
-      }
+      } finally { setBusy(false); }
     }
   };
 
@@ -254,7 +310,7 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
     );
   };
 
-  const isUploadDisabled = !selectedFile || !uploadDate || !selectedFolder;
+  const isUploadDisabled = !selectedFile || (preview && !uploadDate) || !selectedFolder || busy || !source || (preview && !preview.inserted_count);
   const isBuildDisabled = !treeName || !uploadDate || !folderName;
 
   // No early return or internal AnimatePresence - parent handles exit animations
@@ -272,13 +328,13 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.2, delay: 0.05 }}
-        className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden"
+        className="bg-white rounded-lg shadow-xl w-full max-w-3xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
               {/* Header */}
               <div className="flex justify-between items-center p-4 border-b border-gray-100">
                 <div className="flex-grow"></div>
-                <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
+                <button onClick={onClose} aria-label={t('common.close')} className="text-gray-500 hover:text-gray-700 transition-colors">
                   <X size={20} />
                 </button>
               </div>
@@ -321,10 +377,11 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
                   </motion.button>
                 </div>
 
+                <motion.div key={creationMethod} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .18 }} className="space-y-5">
                 {/* File Upload Area - Only show if method is "upload" */}
                 {creationMethod === "upload" && (
                   <motion.div
-                  className={`bg-gray-50 rounded-lg p-5 flex flex-col items-center justify-center space-y-3 border border-dashed ${
+                  className={`bg-gray-50 rounded-lg p-3 flex flex-col items-center justify-center space-y-3 border border-dashed ${
                     isDragging
                       ? "border-gray-500"
                       : selectedFile
@@ -345,9 +402,9 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
                     <motion.div 
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="flex flex-col items-center"
+                      className="flex items-center gap-3"
                     >
-                      <FileText size={40} className="text-black mb-2" />
+                      <FileText size={22} className="text-gray-600" />
                       <p className="text-sm font-medium text-gray-700">{selectedFile.name}</p>
                       <p className="text-xs text-gray-500">{(selectedFile.size / 1024).toFixed(1)} KB</p>
                     </motion.div>
@@ -367,11 +424,25 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
                   <input
                     ref={fileInputRef}
                     type="file"
+                    accept=".csv,.xlsx"
+                    disabled={busy}
                     onChange={handleFileChange}
                     className="hidden"
                   />
                 </motion.div>
                 )}
+
+                {creationMethod === "upload" && busy && <p role="status" className="text-sm text-gray-600">{t('columnRoles.loading')}</p>}
+                {creationMethod === "upload" && importError && <p role="alert" className="text-sm text-red-700">{importError}</p>}
+                <AnimatePresence mode="wait" initial={false}>
+                {creationMethod === "upload" && source && roles && !preview && <motion.div key="roles" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><ColumnRoles columns={source.columns} rows={source.rows} value={roles} onChange={updateRoles} readOnly={busy} /></motion.div>}
+                {creationMethod === "upload" && preview && <motion.section key="preview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2 border-t border-gray-200 pt-4 text-start" aria-label={t('columnRoles.preview')}>
+                  <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">{t('columnRoles.preview')}</h3><button type="button" disabled={busy} onClick={() => setPreview(null)} className="text-sm underline">{t('columnRoles.back')}</button></div>
+                  <p className="text-sm">{t('columnRoles.previewSummary', { count: preview.inserted_count, generated: preview.generated_count, skipped: preview.skipped_count })}</p>
+                  {preview.log && <details className="text-sm text-red-700"><summary className="cursor-pointer">{t('columnRoles.issues')}</summary><ul className="mt-2 space-y-1">{preview.log.rejected_rows?.map(row => <li key={row.row}>{t('columnRoles.row', { number: row.row })}: {row.message}</li>)}</ul></details>}
+                  <HierarchyPreview rows={preview.rows} total={preview.preview_total || preview.inserted_count} />
+                </motion.section>}
+                </AnimatePresence>
 
                 {/* Build Tree Form - Only show if method is "build" */}
                 {creationMethod === "build" && (
@@ -437,6 +508,7 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
                   />
                 </div>
 
+                </motion.div>
                 {/* Action Buttons */}
                 <div className="flex items-end gap-3 pt-2">
                   {creationMethod === "upload" ? (
@@ -444,7 +516,7 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
                       <motion.button
                         whileHover={!isUploadDisabled ? { scale: 1.02 } : {}}
                         whileTap={!isUploadDisabled ? { scale: 0.98 } : {}}
-                        onClick={handleUpload}
+                        onClick={preview ? handleUpload : handlePreview}
                         className={`flex-grow px-4 py-2.5 rounded-md text-white font-medium text-sm flex items-center justify-center gap-2 ${
                           isUploadDisabled
                             ? "opacity-50 cursor-not-allowed"
@@ -453,8 +525,8 @@ const FileUploadModal = ({ isOpen, onClose, onUpload, dbPath, preselectedFolderI
                         style={{ backgroundColor: THEME.buttonColor }}
                         disabled={isUploadDisabled}
                       >
-                        <Upload size={18} />
-                        <span>{t('fileUpload.uploadFile')}</span>
+                        {preview ? <Upload size={18} /> : <GitBranch size={18} />}
+                        <span>{busy ? t('columnRoles.loading') : preview ? t('fileUpload.uploadFile') : t('columnRoles.preview')}</span>
                       </motion.button>
                       <div ref={downloadMenuRef} className="relative shrink-0">
                         <button

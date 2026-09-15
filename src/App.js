@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
+import './styles/data-tools.css';
+import './styles/motion.css';
 import { OrgChartProvider } from './components/context/OrgChartContext';
 import OrgChart from './components/tree/OrgChart';
 import LandingPage from './components/pages/LandingPage';
@@ -45,8 +48,9 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <MotionConfig reducedMotion="user" transition={{ duration: .2, ease: [0.16, 1, 0.3, 1] }}><div className="App">
       <OrgChartProvider>
+        <AnimatePresence mode="wait" initial={false}><motion.div key={dbSelected ? 'chart' : 'landing'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
         {!dbSelected ? (
           <LandingPage onDatabaseReady={handleDatabaseReady} currentDbPath={dbPath} />
         ) : (
@@ -57,12 +61,13 @@ function App() {
             onReturnToLanding={handleReturnToLanding}
           />
         )}
+        </motion.div></AnimatePresence>
       </OrgChartProvider>
       <ToastContainer
         position={i18n.language === 'he' ? 'bottom-left' : 'bottom-right'}
         rtl={i18n.language === 'he'}
       />
-    </div>
+    </div></MotionConfig>
   );
 }
 

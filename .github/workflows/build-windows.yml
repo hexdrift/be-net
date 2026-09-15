@@ -39,14 +39,17 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Test React frontend
+        run: npm run test:run
+
       - name: Build React frontend
         run: npm run build
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Run upload regression tests
-        run: python -m unittest tests.test_upload_workflow
+      - name: Run backend regression tests
+        run: python -m unittest discover -s tests
 
       - name: Build executable
         run: pyinstaller app.spec

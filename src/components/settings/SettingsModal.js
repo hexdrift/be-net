@@ -378,7 +378,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
           </div>
 
           {/* Content with improved visual hierarchy */}
-          <div className="flex-1 p-8 overflow-y-auto relative bg-white">
+          <motion.div key={activeTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .18 }} className="flex-1 p-8 overflow-y-auto relative bg-white">
             {activeTab === 'display' && (
               <div className="h-full">
                 <div className="flex justify-between items-center mb-6">
@@ -715,7 +715,7 @@ const SettingsModal = ({ isOpen, onClose, settings, onSettingsChange }) => {
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
 
         {/* Footer with button styled like UpdatePersonalInfoSection */}

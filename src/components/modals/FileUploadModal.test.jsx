@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import axios from 'axios';
 
 import FileUploadModal from './FileUploadModal';
@@ -11,9 +11,10 @@ vi.mock('axios', () => ({
   },
 }));
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: key => key }),
-}));
+vi.mock('react-i18next', () => {
+  const t = key => key;
+  return { useTranslation: () => ({ t }) };
+});
 
 vi.mock('../common/DatePickerWrapper', () => ({
   default: ({ handleDateChange }) => (
@@ -35,13 +36,20 @@ const chooseUploadFileAndDate = (container) => {
   fireEvent.click(screen.getByRole('button', { name: 'choose-date' }));
 };
 
-const clickEnabledUploadButton = () => {
-  const uploadButtons = screen.getAllByRole('button', {
-    name: 'fileUpload.uploadFile',
+const sourceResponse = { data: { columns: ['hierarchical_structure'], rows: [{ hierarchical_structure: '/root' }], suggested_roles: { fields: {}, hierarchy: { mode: 'path', column: 'hierarchical_structure' } } } };
+const previewResponse = { data: { inserted_count: 1, generated_count: 0, skipped_count: 0, rows: [{ hierarchical_structure: '/root' }] } };
+beforeEach(() => { axios.post.mockResolvedValue(sourceResponse); });
+
+const clickEnabledUploadButton = async () => {
+  const previewButton = await screen.findByRole('button', { name: 'columnRoles.preview' });
+  await waitFor(() => expect(previewButton.disabled).toBe(false));
+  fireEvent.click(previewButton);
+  await waitFor(() => {
+    const buttons = screen.getAllByRole('button', { name: 'fileUpload.uploadFile' });
+    expect(buttons.length).toBe(2);
+    expect(buttons[1].disabled).toBe(false);
   });
-  const uploadButton = uploadButtons[uploadButtons.length - 1];
-  expect(uploadButton.disabled).toBe(false);
-  fireEvent.click(uploadButton);
+  fireEvent.click(screen.getAllByRole('button', { name: 'fileUpload.uploadFile' })[1]);
 };
 
 describe('FileUploadModal', () => {
@@ -59,10 +67,7 @@ describe('FileUploadModal', () => {
 
     chooseUploadFileAndDate(container);
 
-    const uploadButtons = screen.getAllByRole('button', {
-      name: 'fileUpload.uploadFile',
-    });
-    expect(uploadButtons.some(button => button.disabled)).toBe(true);
+    expect(screen.getByRole('button', { name: 'columnRoles.loading' }).disabled).toBe(true);
   });
 
   it('downloads the verified reference workbook', () => {
@@ -143,7 +148,7 @@ describe('FileUploadModal', () => {
         downloaded.filename = this.getAttribute('download');
       });
     const onUpload = vi.fn();
-    axios.post.mockResolvedValue({
+    axios.post.mockResolvedValueOnce(sourceResponse).mockResolvedValueOnce(previewResponse).mockResolvedValue({
       data: {
         table_id: 42,
         folder_id: 7,
@@ -163,7 +168,7 @@ describe('FileUploadModal', () => {
     );
 
     chooseUploadFileAndDate(container);
-    clickEnabledUploadButton();
+    await clickEnabledUploadButton();
 
     await waitFor(() => expect(onUpload).toHaveBeenCalled());
     expect(downloaded).toEqual({
@@ -187,7 +192,7 @@ describe('FileUploadModal', () => {
         downloaded.href = this.getAttribute('href');
         downloaded.filename = this.getAttribute('download');
       });
-    axios.post.mockRejectedValue({
+    axios.post.mockResolvedValueOnce(sourceResponse).mockResolvedValueOnce(previewResponse).mockRejectedValue({
       response: {
         data: {
           error: 'No valid rows were found.',
@@ -208,7 +213,7 @@ describe('FileUploadModal', () => {
     );
 
     chooseUploadFileAndDate(container);
-    clickEnabledUploadButton();
+    await clickEnabledUploadButton();
 
     await waitFor(() => expect(downloaded.filename).toBe('parsing_log_upload.json'));
     expect(downloaded.href).toBe('blob:error-log');
